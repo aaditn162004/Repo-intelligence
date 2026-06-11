@@ -1,0 +1,66 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
+
+@layer base {
+  :root {
+    --background: 0 0% 5%;
+    --foreground: 220 20% 95%;
+    --card: 220 15% 8%;
+    --card-foreground: 220 20% 95%;
+    --border: 220 15% 15%;
+    --input: 220 15% 12%;
+    --ring: 241 76% 70%;
+    --brand: 241 76% 60%;
+  }
+
+  * {
+    @apply border-zinc-800;
+  }
+
+  body {
+    @apply bg-[#080810] text-zinc-100 antialiased;
+    font-family: "Inter", system-ui, sans-serif;
+  }
+
+  ::-webkit-scrollbar {
+    @apply w-1.5 h-1.5;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-zinc-700;
+  }
+
+  code, pre {
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+  }
+}
+
+@layer utilities {
+  .glass {
+    @apply bg-white/5 backdrop-blur-sm border border-white/10;
+  }
+
+  .glow-brand {
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+  }
+
+  .text-gradient {
+    @apply bg-gradient-to-r from-brand-400 to-purple-400 bg-clip-text text-transparent;
+  }
+}
+
+/* React Flow dark theme */
+.react-flow__background {
+  background-color: #080810 !important;
+}
+.react-flow__node {
+  font-size: 12px;
+}
+.react-flow__edge-path {
+  stroke: #4b5563 !important;
+}
