@@ -1,20 +1,20 @@
 """
 Repository Intelligence Platform — FastAPI Application Entry Point
 """
+
 from contextlib import asynccontextmanager
 
 import structlog
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 
+from app.api.routes import documentation, graph, health, query, repositories
 from app.core.config import settings
 from app.core.logging import setup_logging
-from app.services.vector_store import VectorStoreService
-from app.services.cache import CacheService
 from app.embeddings.embedding_service import EmbeddingService
-from app.api.routes import health, repositories, query, graph, documentation
+from app.services.cache import CacheService
+from app.services.vector_store import VectorStoreService
 
 logger = structlog.get_logger()
 
@@ -40,6 +40,7 @@ async def lifespan(app: FastAPI):
 
     # Pre-load embedding model in background to warm up
     import asyncio
+
     embedding_service = EmbeddingService()
     app.state.embedding_service = embedding_service
     loop = asyncio.get_event_loop()

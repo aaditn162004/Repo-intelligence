@@ -6,10 +6,11 @@ Agent graph:
 
 The planner classifies the query and routes to specialised agents.
 """
+
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, List, Optional, AsyncIterator
+from typing import Any, AsyncIterator, Dict, List, Optional
 
 import structlog
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -18,10 +19,10 @@ from langgraph.graph import END, StateGraph
 from typing_extensions import TypedDict
 
 from app.core.config import settings
-from app.retrieval.hybrid_retriever import HybridRetriever
-from app.retrieval.context_builder import ContextBuilder
 from app.graph.knowledge_graph import KnowledgeGraphService
 from app.models.query import QueryType, SourceReference
+from app.retrieval.context_builder import ContextBuilder
+from app.retrieval.hybrid_retriever import HybridRetriever
 
 logger = structlog.get_logger()
 
@@ -29,6 +30,7 @@ logger = structlog.get_logger()
 # ---------------------------------------------------------------------------
 # Graph state
 # ---------------------------------------------------------------------------
+
 
 class AgentState(TypedDict):
     repository_id: str
@@ -48,6 +50,7 @@ class AgentState(TypedDict):
 def _get_llm():
     if settings.LLM_PROVIDER == "groq":
         from langchain_groq import ChatGroq
+
         return ChatGroq(
             model=settings.GROQ_MODEL,
             api_key=settings.GROQ_API_KEY,
@@ -65,6 +68,7 @@ def _get_llm():
 # ---------------------------------------------------------------------------
 # Agent node functions
 # ---------------------------------------------------------------------------
+
 
 def planner_node(state: AgentState) -> AgentState:
     """Classifies the query and refines it for downstream agents."""
@@ -207,6 +211,7 @@ def synthesizer_node(state: AgentState) -> AgentState:
 # Routing logic
 # ---------------------------------------------------------------------------
 
+
 def route_after_planner(state: AgentState) -> str:
     qt = state.get("query_type", "general")
     if qt == QueryType.ARCHITECTURE.value:
@@ -221,6 +226,7 @@ def route_after_planner(state: AgentState) -> str:
 # ---------------------------------------------------------------------------
 # Graph builder
 # ---------------------------------------------------------------------------
+
 
 class RepoAgentGraph:
     """Builds and runs the LangGraph agent pipeline."""
@@ -329,23 +335,29 @@ class RepoAgentGraph:
 
         # Classify query type (fast non-streaming call)
         llm = _get_llm()
-        class_response = await llm.ainvoke([
-            SystemMessage(content=(
-                "Classify the user's question into one of: "
-                "architecture, flow_trace, bug_localization, documentation, dependency_analysis, general. "
-                "Output ONLY the type."
-            )),
-            HumanMessage(content=question),
-        ])
+        class_response = await llm.ainvoke(
+            [
+                SystemMessage(
+                    content=(
+                        "Classify the user's question into one of: "
+                        "architecture, flow_trace, bug_localization, documentation, dependency_analysis, general. "
+                        "Output ONLY the type."
+                    )
+                ),
+                HumanMessage(content=question),
+            ]
+        )
         query_type = class_response.content.strip().lower()
 
         # Yield metadata token
-        yield json.dumps({
-            "type": "metadata",
-            "query_type": query_type,
-            "sources": [s.model_dump() for s in sources[:5]],
-            "graph_context": graph_context,
-        }) + "\n"
+        yield json.dumps(
+            {
+                "type": "metadata",
+                "query_type": query_type,
+                "sources": [s.model_dump() for s in sources[:5]],
+                "graph_context": graph_context,
+            }
+        ) + "\n"
 
         # Stream answer directly via Ollama REST API (bypasses langchain buffering)
         system = context_builder.build_system_prompt(repository_name, query_type)
@@ -354,6 +366,7 @@ class RepoAgentGraph:
         if settings.LLM_PROVIDER == "groq":
             # Groq streams natively — no WDDM buffering issue
             from langchain_groq import ChatGroq
+
             groq_llm = ChatGroq(
                 model=settings.GROQ_MODEL,
                 api_key=settings.GROQ_API_KEY,

@@ -1,4 +1,5 @@
 """Redis cache service for repositories, query results, and graph data."""
+
 from __future__ import annotations
 
 import json
@@ -19,6 +20,7 @@ class CacheService:
 
     async def initialize(self):
         import redis.asyncio as redis_async
+
         self._redis = redis_async.from_url(
             settings.REDIS_URL,
             encoding="utf-8",

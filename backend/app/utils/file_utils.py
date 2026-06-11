@@ -1,16 +1,15 @@
 """File scanning and content reading utilities."""
+
 from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import List, Tuple, Dict
+from typing import Dict, List, Tuple
 
 import structlog
 
 from app.core.config import settings
-from app.parsers.language_detector import (
-    detect_language, should_index_file, IGNORED_DIRS
-)
+from app.parsers.language_detector import IGNORED_DIRS, detect_language, should_index_file
 
 logger = structlog.get_logger()
 

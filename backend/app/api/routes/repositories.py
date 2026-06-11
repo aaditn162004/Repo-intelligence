@@ -1,4 +1,5 @@
 """Repository CRUD and ingestion endpoints."""
+
 from __future__ import annotations
 
 import asyncio
@@ -8,11 +9,11 @@ import uuid
 from datetime import datetime
 from typing import List, Optional
 
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form, BackgroundTasks, Request
-from fastapi.responses import JSONResponse
 import structlog
+from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, Request, UploadFile
+from fastapi.responses import JSONResponse
 
-from app.models.repository import Repository, RepositoryCreate, IndexingStatus, IndexingProgress
+from app.models.repository import IndexingProgress, IndexingStatus, Repository, RepositoryCreate
 from app.services.cache import CacheService
 from app.utils.git_utils import extract_repo_name
 
@@ -28,11 +29,12 @@ def _get_services(request: Request):
 # Background indexing launcher
 # ---------------------------------------------------------------------------
 
+
 async def _launch_indexing(app_state, repo: Repository, zip_path: Optional[str] = None):
-    from app.workers.indexing_worker import IndexingWorker
-    from app.graph.knowledge_graph import KnowledgeGraphService
-    from app.embeddings.embedding_service import EmbeddingService
     from app.core.config import settings
+    from app.embeddings.embedding_service import EmbeddingService
+    from app.graph.knowledge_graph import KnowledgeGraphService
+    from app.workers.indexing_worker import IndexingWorker
 
     embedding_service = EmbeddingService()
     kg_service = KnowledgeGraphService(app_state.cache)
@@ -52,6 +54,7 @@ async def _launch_indexing(app_state, repo: Repository, zip_path: Optional[str] 
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
+
 
 @router.post("", response_model=Repository, status_code=202)
 async def create_repository(

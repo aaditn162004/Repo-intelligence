@@ -1,16 +1,17 @@
 """Documentation generation endpoints."""
+
 from __future__ import annotations
 
+import structlog
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import PlainTextResponse
-import structlog
 
-from app.models.query import DocumentationRequest, DocumentationResponse
-from app.models.repository import Repository, IndexingStatus
-from app.services.cache import CacheService
 from app.embeddings.embedding_service import EmbeddingService
-from app.retrieval.hybrid_retriever import HybridRetriever
+from app.models.query import DocumentationRequest, DocumentationResponse
+from app.models.repository import IndexingStatus, Repository
 from app.retrieval.context_builder import ContextBuilder
+from app.retrieval.hybrid_retriever import HybridRetriever
+from app.services.cache import CacheService
 
 logger = structlog.get_logger()
 router = APIRouter()
@@ -32,6 +33,7 @@ async def generate_documentation(doc_req: DocumentationRequest, request: Request
         raise HTTPException(400, "Repository not ready")
 
     from app.graph.knowledge_graph import KnowledgeGraphService
+
     kg = KnowledgeGraphService(cache)
     retriever = HybridRetriever(request.app.state.vector_store, _embedding_service, kg)
     context_builder = ContextBuilder()
@@ -44,8 +46,9 @@ async def generate_documentation(doc_req: DocumentationRequest, request: Request
     )
 
     # Generate with LLM
+    from langchain_core.messages import HumanMessage, SystemMessage
     from langchain_ollama import ChatOllama
-    from langchain_core.messages import SystemMessage, HumanMessage
+
     from app.core.config import settings
 
     llm = ChatOllama(
@@ -85,10 +88,11 @@ async def generate_readme(repo_id: str, request: Request):
     if repo.status != IndexingStatus.READY:
         raise HTTPException(400, "Repository not ready")
 
-    from app.graph.knowledge_graph import KnowledgeGraphService
+    from langchain_core.messages import HumanMessage, SystemMessage
     from langchain_ollama import ChatOllama
-    from langchain_core.messages import SystemMessage, HumanMessage
+
     from app.core.config import settings
+    from app.graph.knowledge_graph import KnowledgeGraphService
 
     kg = KnowledgeGraphService(cache)
     arch_summary = await kg.get_architecture_summary(repo_id)
@@ -100,7 +104,9 @@ async def generate_readme(repo_id: str, request: Request):
         num_predict=3000,
     )
 
-    system = "You are a developer advocate writing a professional README.md for an open-source project."
+    system = (
+        "You are a developer advocate writing a professional README.md for an open-source project."
+    )
     prompt = (
         f"Generate a professional README.md for the repository: **{repo.name}**\n\n"
         f"Repository stats:\n"

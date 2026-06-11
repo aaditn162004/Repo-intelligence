@@ -2,6 +2,7 @@
 Background indexing worker.
 Orchestrates the full pipeline: clone → parse → embed → graph → cache.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -9,22 +10,22 @@ import os
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, List
+from typing import List, Optional
 
 import structlog
 
 from app.core.config import settings
-from app.models.repository import Repository, IndexingStatus, IndexingProgress
-from app.models.code_chunk import CodeChunk
-from app.parsers.ast_parser import ASTParser
-from app.parsers.language_detector import detect_language, is_supported_language, detect_frameworks
-from app.parsers.chunker import StructureAwareChunker
 from app.embeddings.embedding_service import EmbeddingService
-from app.services.vector_store import VectorStoreService
-from app.services.cache import CacheService
 from app.graph.knowledge_graph import KnowledgeGraphService
-from app.utils.git_utils import clone_repository, cleanup_repository, extract_repo_name
-from app.utils.file_utils import scan_repository, read_file_safe, count_languages
+from app.models.code_chunk import CodeChunk
+from app.models.repository import IndexingProgress, IndexingStatus, Repository
+from app.parsers.ast_parser import ASTParser
+from app.parsers.chunker import StructureAwareChunker
+from app.parsers.language_detector import detect_frameworks, detect_language, is_supported_language
+from app.services.cache import CacheService
+from app.services.vector_store import VectorStoreService
+from app.utils.file_utils import count_languages, read_file_safe, scan_repository
+from app.utils.git_utils import cleanup_repository, clone_repository, extract_repo_name
 from app.utils.zip_utils import extract_zip, validate_zip
 
 logger = structlog.get_logger()
@@ -107,22 +108,27 @@ class IndexingWorker:
                 else:
                     # For unsupported languages, add a single module chunk
                     from app.models.code_chunk import ChunkType
-                    all_chunks.append(CodeChunk(
-                        repository_id=repo.id,
-                        file_path=rel_path,
-                        language=lang or "unknown",
-                        chunk_type=ChunkType.MODULE,
-                        name=Path(rel_path).stem,
-                        content=content[:1500],
-                        start_line=1,
-                        end_line=len(content.splitlines()),
-                    ))
+
+                    all_chunks.append(
+                        CodeChunk(
+                            repository_id=repo.id,
+                            file_path=rel_path,
+                            language=lang or "unknown",
+                            chunk_type=ChunkType.MODULE,
+                            name=Path(rel_path).stem,
+                            content=content[:1500],
+                            start_line=1,
+                            end_line=len(content.splitlines()),
+                        )
+                    )
 
                 if i % 20 == 0:
                     progress = 15 + (i / len(file_list)) * 30
                     await self._update_progress(
-                        repo.id, IndexingStatus.PARSING,
-                        f"Parsing {rel_path}", progress,
+                        repo.id,
+                        IndexingStatus.PARSING,
+                        f"Parsing {rel_path}",
+                        progress,
                         current_file=rel_path,
                         indexed_files=i,
                         total_files=len(file_list),
@@ -132,7 +138,9 @@ class IndexingWorker:
             repo.total_chunks = len(all_chunks)
 
             # --- Stage 4: Create Qdrant collection ---
-            await self._update_progress(repo.id, IndexingStatus.EMBEDDING, "Creating vector index", 50)
+            await self._update_progress(
+                repo.id, IndexingStatus.EMBEDDING, "Creating vector index", 50
+            )
             await self._vector_store.create_collection(repo.id)
 
             # --- Stage 5: Embed chunks in batches ---
@@ -142,20 +150,26 @@ class IndexingWorker:
 
             batch_size = settings.EMBEDDING_BATCH_SIZE
             for batch_start in range(0, len(texts), batch_size):
-                batch_texts = texts[batch_start:batch_start + batch_size]
-                batch_chunks = chunks_to_embed[batch_start:batch_start + batch_size]
+                batch_texts = texts[batch_start : batch_start + batch_size]
+                batch_chunks = chunks_to_embed[batch_start : batch_start + batch_size]
 
                 embeddings = await self._embedder.embed_texts(batch_texts)
-                await self._vector_store.upsert_chunks(repo.id, batch_chunks, embeddings, batch_texts)
+                await self._vector_store.upsert_chunks(
+                    repo.id, batch_chunks, embeddings, batch_texts
+                )
 
                 progress = 50 + (batch_start / max(len(texts), 1)) * 30
                 await self._update_progress(
-                    repo.id, IndexingStatus.EMBEDDING,
-                    f"Embedding chunks {batch_start}/{len(texts)}", progress,
+                    repo.id,
+                    IndexingStatus.EMBEDDING,
+                    f"Embedding chunks {batch_start}/{len(texts)}",
+                    progress,
                 )
 
             # --- Stage 6: Build knowledge graph ---
-            await self._update_progress(repo.id, IndexingStatus.GRAPHING, "Building dependency graph", 85)
+            await self._update_progress(
+                repo.id, IndexingStatus.GRAPHING, "Building dependency graph", 85
+            )
             await self._kg.build_graph(repo.id, all_chunks)
 
             # --- Stage 7: Finalize ---

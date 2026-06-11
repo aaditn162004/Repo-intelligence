@@ -1,20 +1,21 @@
 """Natural language query endpoints with streaming SSE support."""
+
 from __future__ import annotations
 
 import hashlib
 import json
 from typing import AsyncIterator
 
+import structlog
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
-import structlog
 
-from app.models.query import QueryRequest, QueryResponse, QueryType
-from app.models.repository import Repository, IndexingStatus
-from app.services.cache import CacheService
-from app.embeddings.embedding_service import EmbeddingService
-from app.retrieval.hybrid_retriever import HybridRetriever
 from app.agents.orchestrator import RepoAgentGraph
+from app.embeddings.embedding_service import EmbeddingService
+from app.models.query import QueryRequest, QueryResponse, QueryType
+from app.models.repository import IndexingStatus, Repository
+from app.retrieval.hybrid_retriever import HybridRetriever
+from app.services.cache import CacheService
 
 logger = structlog.get_logger()
 router = APIRouter()
@@ -24,6 +25,7 @@ _embedding_service = EmbeddingService()
 
 def _get_agent_graph(request: Request) -> RepoAgentGraph:
     from app.graph.knowledge_graph import KnowledgeGraphService
+
     cache = request.app.state.cache
     vector_store = request.app.state.vector_store
 

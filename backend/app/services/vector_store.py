@@ -2,9 +2,11 @@
 Qdrant vector store service.
 Manages collections per repository and handles hybrid retrieval.
 """
+
 from __future__ import annotations
 
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
+
 import structlog
 
 from app.core.config import settings
@@ -35,7 +37,9 @@ class VectorStoreService:
                 port=settings.QDRANT_PORT,
                 timeout=30,
             )
-            logger.info("Qdrant connected (local)", host=settings.QDRANT_HOST, port=settings.QDRANT_PORT)
+            logger.info(
+                "Qdrant connected (local)", host=settings.QDRANT_HOST, port=settings.QDRANT_PORT
+            )
 
     def _collection_name(self, repository_id: str) -> str:
         safe_id = repository_id.replace("-", "_")[:32]
@@ -86,18 +90,20 @@ class VectorStoreService:
                 "content": chunk.content[:1000],
                 "text_for_search": text[:500],
             }
-            points.append(PointStruct(
-                id=self._chunk_id_to_int(chunk.id),
-                vector=embedding,
-                payload=payload,
-            ))
+            points.append(
+                PointStruct(
+                    id=self._chunk_id_to_int(chunk.id),
+                    vector=embedding,
+                    payload=payload,
+                )
+            )
 
         # Batch upsert
         batch_size = 100
         for i in range(0, len(points), batch_size):
             self._client.upsert(
                 collection_name=collection_name,
-                points=points[i:i + batch_size],
+                points=points[i : i + batch_size],
             )
 
         logger.info("Upserted chunks", collection=collection_name, count=len(points))
@@ -110,7 +116,7 @@ class VectorStoreService:
         score_threshold: float = 0.0,
         filters: Optional[Dict[str, Any]] = None,
     ) -> List[Dict[str, Any]]:
-        from qdrant_client.models import Filter, FieldCondition, MatchValue
+        from qdrant_client.models import FieldCondition, Filter, MatchValue
 
         collection_name = self._collection_name(repository_id)
 
@@ -163,4 +169,5 @@ class VectorStoreService:
     @staticmethod
     def _chunk_id_to_int(chunk_id: str) -> int:
         import hashlib
+
         return int(hashlib.md5(chunk_id.encode()).hexdigest()[:15], 16)

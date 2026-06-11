@@ -2,6 +2,7 @@
 Embedding service using BAAI/bge-small-en-v1.5 via sentence-transformers.
 Handles batched encoding and caching.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -30,6 +31,7 @@ class EmbeddingService:
     def _load_model(self):
         if self._model is None:
             from sentence_transformers import SentenceTransformer
+
             logger.info("Loading embedding model", model=self._model_name)
             self._model = SentenceTransformer(self._model_name, device="cpu")
             logger.info("Embedding model loaded", dimension=self._dimension)

@@ -2,20 +2,22 @@
 Tree-sitter-based AST parser for extracting structured code elements.
 Supports Python, JavaScript, TypeScript, Java, Go, and more.
 """
+
 from __future__ import annotations
 
 import re
 from pathlib import Path
-from typing import List, Optional, Dict, Any, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import structlog
 
-from app.models.code_chunk import CodeChunk, ChunkType
+from app.models.code_chunk import ChunkType, CodeChunk
 
 logger = structlog.get_logger()
 
 try:
-    from tree_sitter_languages import get_language, get_parser as get_ts_parser
+    from tree_sitter_languages import get_language
+    from tree_sitter_languages import get_parser as get_ts_parser
 
     def _make_parser(lang: str):
         return get_ts_parser(lang)
@@ -115,6 +117,7 @@ GO_QUERIES = {
 # Main parser class
 # ---------------------------------------------------------------------------
 
+
 class ASTParser:
     """Parses source files using Tree-sitter to extract structured code elements."""
 
@@ -158,13 +161,17 @@ class ASTParser:
         if language == "python":
             chunks.extend(self._extract_python_chunks(tree, content, file_path, repository_id))
         elif language in ("javascript", "typescript"):
-            chunks.extend(self._extract_js_ts_chunks(tree, content, file_path, repository_id, language))
+            chunks.extend(
+                self._extract_js_ts_chunks(tree, content, file_path, repository_id, language)
+            )
         elif language == "java":
             chunks.extend(self._extract_java_chunks(tree, content, file_path, repository_id))
         elif language == "go":
             chunks.extend(self._extract_go_chunks(tree, content, file_path, repository_id))
         else:
-            chunks.extend(self._extract_generic_chunks(tree, content, file_path, repository_id, language))
+            chunks.extend(
+                self._extract_generic_chunks(tree, content, file_path, repository_id, language)
+            )
 
         # Always add a module-level chunk for the whole file
         if chunks:
@@ -174,9 +181,11 @@ class ASTParser:
         return chunks
 
     def _node_text(self, node, content_bytes: bytes) -> str:
-        return content_bytes[node.start_byte:node.end_byte].decode("utf-8", errors="replace")
+        return content_bytes[node.start_byte : node.end_byte].decode("utf-8", errors="replace")
 
-    def _extract_python_chunks(self, tree, content: str, file_path: str, repository_id: str) -> List[CodeChunk]:
+    def _extract_python_chunks(
+        self, tree, content: str, file_path: str, repository_id: str
+    ) -> List[CodeChunk]:
         chunks = []
         content_bytes = content.encode("utf-8")
         lines = content.splitlines()
@@ -192,21 +201,23 @@ class ASTParser:
                 signature = f"def {name}{self._node_text(params_node, content_bytes) if params_node else '()'}"
 
                 chunk_type = ChunkType.METHOD if parent_name else ChunkType.FUNCTION
-                chunks.append(CodeChunk(
-                    repository_id=repository_id,
-                    file_path=file_path,
-                    language="python",
-                    chunk_type=chunk_type,
-                    name=name,
-                    content=body_text,
-                    start_line=node.start_point[0] + 1,
-                    end_line=node.end_point[0] + 1,
-                    signature=signature,
-                    docstring=docstring,
-                    decorators=decorators,
-                    parent_name=parent_name,
-                    dependencies=self._extract_python_calls(body_text),
-                ))
+                chunks.append(
+                    CodeChunk(
+                        repository_id=repository_id,
+                        file_path=file_path,
+                        language="python",
+                        chunk_type=chunk_type,
+                        name=name,
+                        content=body_text,
+                        start_line=node.start_point[0] + 1,
+                        end_line=node.end_point[0] + 1,
+                        signature=signature,
+                        docstring=docstring,
+                        decorators=decorators,
+                        parent_name=parent_name,
+                        dependencies=self._extract_python_calls(body_text),
+                    )
+                )
 
             elif node.type == "class_definition":
                 name_node = node.child_by_field_name("name")
@@ -214,33 +225,37 @@ class ASTParser:
                 class_text = self._node_text(node, content_bytes)
                 docstring = self._extract_python_docstring(node, content_bytes)
                 decorators = self._extract_python_decorators(node, content, lines)
-                chunks.append(CodeChunk(
-                    repository_id=repository_id,
-                    file_path=file_path,
-                    language="python",
-                    chunk_type=ChunkType.CLASS,
-                    name=name,
-                    content=class_text,
-                    start_line=node.start_point[0] + 1,
-                    end_line=node.end_point[0] + 1,
-                    docstring=docstring,
-                    decorators=decorators,
-                ))
+                chunks.append(
+                    CodeChunk(
+                        repository_id=repository_id,
+                        file_path=file_path,
+                        language="python",
+                        chunk_type=ChunkType.CLASS,
+                        name=name,
+                        content=class_text,
+                        start_line=node.start_point[0] + 1,
+                        end_line=node.end_point[0] + 1,
+                        docstring=docstring,
+                        decorators=decorators,
+                    )
+                )
                 for child in node.children:
                     walk(child, parent_name=name)
                 return
 
             elif node.type in ("import_statement", "import_from_statement"):
                 import_text = self._node_text(node, content_bytes)
-                chunks.append(CodeChunk(
-                    repository_id=repository_id,
-                    file_path=file_path,
-                    language="python",
-                    chunk_type=ChunkType.IMPORT,
-                    content=import_text,
-                    start_line=node.start_point[0] + 1,
-                    end_line=node.end_point[0] + 1,
-                ))
+                chunks.append(
+                    CodeChunk(
+                        repository_id=repository_id,
+                        file_path=file_path,
+                        language="python",
+                        chunk_type=ChunkType.IMPORT,
+                        content=import_text,
+                        start_line=node.start_point[0] + 1,
+                        end_line=node.end_point[0] + 1,
+                    )
+                )
 
             for child in node.children:
                 walk(child, parent_name=parent_name)
@@ -256,7 +271,7 @@ class ASTParser:
                         for expr in stmt.children:
                             if expr.type in ("string", "concatenated_string"):
                                 text = self._node_text(expr, content_bytes)
-                                return text.strip('"\'').strip()
+                                return text.strip("\"'").strip()
         return None
 
     def _extract_python_decorators(self, node, content: str, lines: List[str]) -> List[str]:
@@ -270,10 +285,26 @@ class ASTParser:
         return decorators
 
     def _extract_python_calls(self, code: str) -> List[str]:
-        pattern = re.compile(r'\b([a-zA-Z_][a-zA-Z0-9_]*)\s*\(')
+        pattern = re.compile(r"\b([a-zA-Z_][a-zA-Z0-9_]*)\s*\(")
         calls = list(set(pattern.findall(code)))
-        builtins = {"print", "len", "range", "str", "int", "list", "dict", "set", "tuple",
-                    "isinstance", "hasattr", "getattr", "setattr", "type", "super", "enumerate"}
+        builtins = {
+            "print",
+            "len",
+            "range",
+            "str",
+            "int",
+            "list",
+            "dict",
+            "set",
+            "tuple",
+            "isinstance",
+            "hasattr",
+            "getattr",
+            "setattr",
+            "type",
+            "super",
+            "enumerate",
+        }
         return [c for c in calls if c not in builtins][:20]
 
     def _extract_js_ts_chunks(
@@ -287,32 +318,36 @@ class ASTParser:
                 name_node = node.child_by_field_name("name")
                 name = self._node_text(name_node, content_bytes) if name_node else "anonymous"
                 text = self._node_text(node, content_bytes)
-                chunks.append(CodeChunk(
-                    repository_id=repository_id,
-                    file_path=file_path,
-                    language=language,
-                    chunk_type=ChunkType.FUNCTION,
-                    name=name,
-                    content=text,
-                    start_line=node.start_point[0] + 1,
-                    end_line=node.end_point[0] + 1,
-                    parent_name=parent_name,
-                ))
+                chunks.append(
+                    CodeChunk(
+                        repository_id=repository_id,
+                        file_path=file_path,
+                        language=language,
+                        chunk_type=ChunkType.FUNCTION,
+                        name=name,
+                        content=text,
+                        start_line=node.start_point[0] + 1,
+                        end_line=node.end_point[0] + 1,
+                        parent_name=parent_name,
+                    )
+                )
 
             elif node.type in ("class_declaration", "class"):
                 name_node = node.child_by_field_name("name")
                 name = self._node_text(name_node, content_bytes) if name_node else "AnonymousClass"
                 text = self._node_text(node, content_bytes)
-                chunks.append(CodeChunk(
-                    repository_id=repository_id,
-                    file_path=file_path,
-                    language=language,
-                    chunk_type=ChunkType.CLASS,
-                    name=name,
-                    content=text,
-                    start_line=node.start_point[0] + 1,
-                    end_line=node.end_point[0] + 1,
-                ))
+                chunks.append(
+                    CodeChunk(
+                        repository_id=repository_id,
+                        file_path=file_path,
+                        language=language,
+                        chunk_type=ChunkType.CLASS,
+                        name=name,
+                        content=text,
+                        start_line=node.start_point[0] + 1,
+                        end_line=node.end_point[0] + 1,
+                    )
+                )
                 for child in node.children:
                     walk(child, parent_name=name)
                 return
@@ -321,29 +356,33 @@ class ASTParser:
                 name_node = node.child_by_field_name("name")
                 name = self._node_text(name_node, content_bytes) if name_node else "method"
                 text = self._node_text(node, content_bytes)
-                chunks.append(CodeChunk(
-                    repository_id=repository_id,
-                    file_path=file_path,
-                    language=language,
-                    chunk_type=ChunkType.METHOD,
-                    name=name,
-                    content=text,
-                    start_line=node.start_point[0] + 1,
-                    end_line=node.end_point[0] + 1,
-                    parent_name=parent_name,
-                ))
+                chunks.append(
+                    CodeChunk(
+                        repository_id=repository_id,
+                        file_path=file_path,
+                        language=language,
+                        chunk_type=ChunkType.METHOD,
+                        name=name,
+                        content=text,
+                        start_line=node.start_point[0] + 1,
+                        end_line=node.end_point[0] + 1,
+                        parent_name=parent_name,
+                    )
+                )
 
             elif node.type in ("import_statement", "import_declaration"):
                 text = self._node_text(node, content_bytes)
-                chunks.append(CodeChunk(
-                    repository_id=repository_id,
-                    file_path=file_path,
-                    language=language,
-                    chunk_type=ChunkType.IMPORT,
-                    content=text,
-                    start_line=node.start_point[0] + 1,
-                    end_line=node.end_point[0] + 1,
-                ))
+                chunks.append(
+                    CodeChunk(
+                        repository_id=repository_id,
+                        file_path=file_path,
+                        language=language,
+                        chunk_type=ChunkType.IMPORT,
+                        content=text,
+                        start_line=node.start_point[0] + 1,
+                        end_line=node.end_point[0] + 1,
+                    )
+                )
 
             for child in node.children:
                 walk(child, parent_name=parent_name)
@@ -351,7 +390,9 @@ class ASTParser:
         walk(tree.root_node)
         return chunks
 
-    def _extract_java_chunks(self, tree, content: str, file_path: str, repository_id: str) -> List[CodeChunk]:
+    def _extract_java_chunks(
+        self, tree, content: str, file_path: str, repository_id: str
+    ) -> List[CodeChunk]:
         chunks = []
         content_bytes = content.encode("utf-8")
 
@@ -360,16 +401,18 @@ class ASTParser:
                 name_node = node.child_by_field_name("name")
                 name = self._node_text(name_node, content_bytes) if name_node else "Class"
                 text = self._node_text(node, content_bytes)
-                chunks.append(CodeChunk(
-                    repository_id=repository_id,
-                    file_path=file_path,
-                    language="java",
-                    chunk_type=ChunkType.CLASS,
-                    name=name,
-                    content=text,
-                    start_line=node.start_point[0] + 1,
-                    end_line=node.end_point[0] + 1,
-                ))
+                chunks.append(
+                    CodeChunk(
+                        repository_id=repository_id,
+                        file_path=file_path,
+                        language="java",
+                        chunk_type=ChunkType.CLASS,
+                        name=name,
+                        content=text,
+                        start_line=node.start_point[0] + 1,
+                        end_line=node.end_point[0] + 1,
+                    )
+                )
                 for child in node.children:
                     walk(child, parent_name=name)
                 return
@@ -378,29 +421,33 @@ class ASTParser:
                 name_node = node.child_by_field_name("name")
                 name = self._node_text(name_node, content_bytes) if name_node else "method"
                 text = self._node_text(node, content_bytes)
-                chunks.append(CodeChunk(
-                    repository_id=repository_id,
-                    file_path=file_path,
-                    language="java",
-                    chunk_type=ChunkType.METHOD,
-                    name=name,
-                    content=text,
-                    start_line=node.start_point[0] + 1,
-                    end_line=node.end_point[0] + 1,
-                    parent_name=parent_name,
-                ))
+                chunks.append(
+                    CodeChunk(
+                        repository_id=repository_id,
+                        file_path=file_path,
+                        language="java",
+                        chunk_type=ChunkType.METHOD,
+                        name=name,
+                        content=text,
+                        start_line=node.start_point[0] + 1,
+                        end_line=node.end_point[0] + 1,
+                        parent_name=parent_name,
+                    )
+                )
 
             elif node.type == "import_declaration":
                 text = self._node_text(node, content_bytes)
-                chunks.append(CodeChunk(
-                    repository_id=repository_id,
-                    file_path=file_path,
-                    language="java",
-                    chunk_type=ChunkType.IMPORT,
-                    content=text,
-                    start_line=node.start_point[0] + 1,
-                    end_line=node.end_point[0] + 1,
-                ))
+                chunks.append(
+                    CodeChunk(
+                        repository_id=repository_id,
+                        file_path=file_path,
+                        language="java",
+                        chunk_type=ChunkType.IMPORT,
+                        content=text,
+                        start_line=node.start_point[0] + 1,
+                        end_line=node.end_point[0] + 1,
+                    )
+                )
 
             for child in node.children:
                 walk(child, parent_name=parent_name)
@@ -408,7 +455,9 @@ class ASTParser:
         walk(tree.root_node)
         return chunks
 
-    def _extract_go_chunks(self, tree, content: str, file_path: str, repository_id: str) -> List[CodeChunk]:
+    def _extract_go_chunks(
+        self, tree, content: str, file_path: str, repository_id: str
+    ) -> List[CodeChunk]:
         chunks = []
         content_bytes = content.encode("utf-8")
 
@@ -417,56 +466,64 @@ class ASTParser:
                 name_node = node.child_by_field_name("name")
                 name = self._node_text(name_node, content_bytes) if name_node else "func"
                 text = self._node_text(node, content_bytes)
-                chunks.append(CodeChunk(
-                    repository_id=repository_id,
-                    file_path=file_path,
-                    language="go",
-                    chunk_type=ChunkType.FUNCTION,
-                    name=name,
-                    content=text,
-                    start_line=node.start_point[0] + 1,
-                    end_line=node.end_point[0] + 1,
-                ))
+                chunks.append(
+                    CodeChunk(
+                        repository_id=repository_id,
+                        file_path=file_path,
+                        language="go",
+                        chunk_type=ChunkType.FUNCTION,
+                        name=name,
+                        content=text,
+                        start_line=node.start_point[0] + 1,
+                        end_line=node.end_point[0] + 1,
+                    )
+                )
 
             elif node.type == "method_declaration":
                 name_node = node.child_by_field_name("name")
                 name = self._node_text(name_node, content_bytes) if name_node else "method"
                 text = self._node_text(node, content_bytes)
-                chunks.append(CodeChunk(
-                    repository_id=repository_id,
-                    file_path=file_path,
-                    language="go",
-                    chunk_type=ChunkType.METHOD,
-                    name=name,
-                    content=text,
-                    start_line=node.start_point[0] + 1,
-                    end_line=node.end_point[0] + 1,
-                    parent_name=parent_name,
-                ))
+                chunks.append(
+                    CodeChunk(
+                        repository_id=repository_id,
+                        file_path=file_path,
+                        language="go",
+                        chunk_type=ChunkType.METHOD,
+                        name=name,
+                        content=text,
+                        start_line=node.start_point[0] + 1,
+                        end_line=node.end_point[0] + 1,
+                        parent_name=parent_name,
+                    )
+                )
 
             elif node.type == "type_declaration":
                 text = self._node_text(node, content_bytes)
-                chunks.append(CodeChunk(
-                    repository_id=repository_id,
-                    file_path=file_path,
-                    language="go",
-                    chunk_type=ChunkType.TYPE,
-                    content=text,
-                    start_line=node.start_point[0] + 1,
-                    end_line=node.end_point[0] + 1,
-                ))
+                chunks.append(
+                    CodeChunk(
+                        repository_id=repository_id,
+                        file_path=file_path,
+                        language="go",
+                        chunk_type=ChunkType.TYPE,
+                        content=text,
+                        start_line=node.start_point[0] + 1,
+                        end_line=node.end_point[0] + 1,
+                    )
+                )
 
             elif node.type == "import_declaration":
                 text = self._node_text(node, content_bytes)
-                chunks.append(CodeChunk(
-                    repository_id=repository_id,
-                    file_path=file_path,
-                    language="go",
-                    chunk_type=ChunkType.IMPORT,
-                    content=text,
-                    start_line=node.start_point[0] + 1,
-                    end_line=node.end_point[0] + 1,
-                ))
+                chunks.append(
+                    CodeChunk(
+                        repository_id=repository_id,
+                        file_path=file_path,
+                        language="go",
+                        chunk_type=ChunkType.IMPORT,
+                        content=text,
+                        start_line=node.start_point[0] + 1,
+                        end_line=node.end_point[0] + 1,
+                    )
+                )
 
             for child in node.children:
                 walk(child, parent_name=parent_name)
@@ -496,10 +553,11 @@ class ASTParser:
 
         return chunks
 
-    def _regex_python(self, lines: List[str], file_path: str, repository_id: str) -> List[CodeChunk]:
+    def _regex_python(
+        self, lines: List[str], file_path: str, repository_id: str
+    ) -> List[CodeChunk]:
         chunks = []
-        func_re = re.compile(r'^(\s*)(async\s+)?def\s+(\w+)\s*\(')
-        class_re = re.compile(r'^(\s*)class\s+(\w+)')
+        func_re = re.compile(r"^(\s*)(async\s+)?def\s+(\w+)\s*\(")
 
         i = 0
         while i < len(lines):
@@ -513,44 +571,55 @@ class ASTParser:
                     stripped = lines[i]
                     if stripped and not stripped[0].isspace() and indent == 0:
                         break
-                    if stripped and len(stripped) - len(stripped.lstrip()) <= indent and i > start + 1:
+                    if (
+                        stripped
+                        and len(stripped) - len(stripped.lstrip()) <= indent
+                        and i > start + 1
+                    ):
                         break
                     i += 1
                 content = "\n".join(lines[start:i])
-                chunks.append(CodeChunk(
-                    repository_id=repository_id,
-                    file_path=file_path,
-                    language="python",
-                    chunk_type=ChunkType.FUNCTION,
-                    name=name,
-                    content=content,
-                    start_line=start + 1,
-                    end_line=i,
-                ))
+                chunks.append(
+                    CodeChunk(
+                        repository_id=repository_id,
+                        file_path=file_path,
+                        language="python",
+                        chunk_type=ChunkType.FUNCTION,
+                        name=name,
+                        content=content,
+                        start_line=start + 1,
+                        end_line=i,
+                    )
+                )
                 continue
             i += 1
 
         return chunks
 
-    def _regex_js(self, lines: List[str], file_path: str, repository_id: str, language: str) -> List[CodeChunk]:
+    def _regex_js(
+        self, lines: List[str], file_path: str, repository_id: str, language: str
+    ) -> List[CodeChunk]:
         chunks = []
-        func_re = re.compile(r'(?:function\s+(\w+)|(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s+)?(?:\([^)]*\)|[^=])\s*=>)')
-        class_re = re.compile(r'class\s+(\w+)')
+        func_re = re.compile(
+            r"(?:function\s+(\w+)|(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s+)?(?:\([^)]*\)|[^=])\s*=>)"
+        )
 
         for i, line in enumerate(lines):
             m = func_re.search(line)
             if m:
                 name = m.group(1) or m.group(2) or "anonymous"
-                chunks.append(CodeChunk(
-                    repository_id=repository_id,
-                    file_path=file_path,
-                    language=language,
-                    chunk_type=ChunkType.FUNCTION,
-                    name=name,
-                    content=line,
-                    start_line=i + 1,
-                    end_line=i + 1,
-                ))
+                chunks.append(
+                    CodeChunk(
+                        repository_id=repository_id,
+                        file_path=file_path,
+                        language=language,
+                        chunk_type=ChunkType.FUNCTION,
+                        name=name,
+                        content=line,
+                        start_line=i + 1,
+                        end_line=i + 1,
+                    )
+                )
 
         return chunks
 

@@ -2,14 +2,15 @@
 Structure-aware chunker that builds semantic text blocks from AST chunks.
 Combines nearby small chunks and splits oversized ones with overlap.
 """
+
 from __future__ import annotations
 
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
 import structlog
 
-from app.models.code_chunk import CodeChunk, ChunkType
 from app.core.config import settings
+from app.models.code_chunk import ChunkType, CodeChunk
 
 logger = structlog.get_logger()
 
@@ -24,7 +25,7 @@ class StructureAwareChunker:
       - Oversized chunks are split with overlap
     """
 
-    MAX_CHARS = settings.CHUNK_SIZE * 4   # rough chars per embedding chunk
+    MAX_CHARS = settings.CHUNK_SIZE * 4  # rough chars per embedding chunk
     OVERLAP_CHARS = settings.CHUNK_OVERLAP * 4
 
     def prepare_for_embedding(self, chunks: List[CodeChunk]) -> List[Dict[str, Any]]:
@@ -44,10 +45,12 @@ class StructureAwareChunker:
         # Merge imports into one chunk per file
         for file_path, imp_list in import_chunks.items():
             combined = "\n".join(c.content for c in imp_list)
-            results.append({
-                "chunk": imp_list[0],
-                "text": self._format_embedding_text(imp_list[0], combined),
-            })
+            results.append(
+                {
+                    "chunk": imp_list[0],
+                    "text": self._format_embedding_text(imp_list[0], combined),
+                }
+            )
 
         # Process remaining chunks
         for chunk in other_chunks:

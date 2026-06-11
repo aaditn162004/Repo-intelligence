@@ -2,16 +2,17 @@
 Dependency graph builder using NetworkX.
 Constructs file-level and symbol-level dependency relationships from parsed chunks.
 """
+
 from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import List, Dict, Any, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 import networkx as nx
 import structlog
 
-from app.models.code_chunk import CodeChunk, ChunkType
+from app.models.code_chunk import ChunkType, CodeChunk
 
 logger = structlog.get_logger()
 
@@ -118,7 +119,9 @@ class DependencyGraph:
                 file_node = f"file::{chunk.file_path}"
                 chunk_node = self._chunk_node_id(chunk)
                 if self.graph.has_node(file_node) and self.graph.has_node(chunk_node):
-                    self.graph.add_edge(file_node, chunk_node, edge_type="contains", label="contains")
+                    self.graph.add_edge(
+                        file_node, chunk_node, edge_type="contains", label="contains"
+                    )
 
     def _resolve_import(self, import_text: str, current_file: str) -> List[str]:
         """Parse an import statement and return module names."""
@@ -143,12 +146,13 @@ class DependencyGraph:
 
     def _extract_base_classes(self, content: str, language: str) -> List[str]:
         import re
+
         if language == "python":
-            m = re.search(r'class\s+\w+\s*\(([^)]+)\)', content)
+            m = re.search(r"class\s+\w+\s*\(([^)]+)\)", content)
             if m:
                 return [b.strip() for b in m.group(1).split(",") if b.strip()]
         elif language in ("javascript", "typescript"):
-            m = re.search(r'extends\s+(\w+)', content)
+            m = re.search(r"extends\s+(\w+)", content)
             if m:
                 return [m.group(1)]
         return []

@@ -1,4 +1,5 @@
 """Git clone and repository utilities."""
+
 from __future__ import annotations
 
 import os
@@ -33,7 +34,7 @@ def clone_repository(
     logger.info("Cloning repository", url=url.replace(github_token or "", "***"), branch=branch)
 
     try:
-        repo = git.Repo.clone_from(
+        git.Repo.clone_from(
             url,
             str(dest_path),
             branch=branch,
@@ -41,7 +42,7 @@ def clone_repository(
         )
     except git.GitCommandError:
         # Retry without specifying branch (some repos use 'master')
-        repo = git.Repo.clone_from(url, str(dest_path), depth=1)
+        git.Repo.clone_from(url, str(dest_path), depth=1)
 
     logger.info("Repository cloned", path=str(dest_path))
     return str(dest_path)

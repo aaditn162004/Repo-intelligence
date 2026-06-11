@@ -2,7 +2,6 @@ import re
 from pathlib import Path
 from typing import Dict, List, Optional
 
-
 EXTENSION_MAP: Dict[str, str] = {
     ".py": "python",
     ".js": "javascript",
@@ -41,8 +40,16 @@ EXTENSION_MAP: Dict[str, str] = {
 }
 
 SUPPORTED_LANGUAGES: List[str] = [
-    "python", "javascript", "typescript", "java", "go",
-    "rust", "cpp", "c", "ruby", "php",
+    "python",
+    "javascript",
+    "typescript",
+    "java",
+    "go",
+    "rust",
+    "cpp",
+    "c",
+    "ruby",
+    "php",
 ]
 
 FRAMEWORK_PATTERNS: Dict[str, List[str]] = {
@@ -53,7 +60,7 @@ FRAMEWORK_PATTERNS: Dict[str, List[str]] = {
     "react": ["import React", "from 'react'", "useState", "useEffect"],
     "nextjs": ["next/", "getServerSideProps", "getStaticProps"],
     "spring": ["@SpringBootApplication", "@RestController", "springframework"],
-    "gin": ["gin.Default()", "gin.New()", "\"github.com/gin-gonic/gin\""],
+    "gin": ["gin.Default()", "gin.New()", '"github.com/gin-gonic/gin"'],
     "sqlalchemy": ["from sqlalchemy", "import sqlalchemy"],
     "prisma": ["@prisma/client", "PrismaClient"],
     "graphql": ["GraphQL", "graphql", "schema {", "type Query"],
@@ -63,17 +70,60 @@ FRAMEWORK_PATTERNS: Dict[str, List[str]] = {
 }
 
 IGNORED_DIRS = {
-    ".git", ".svn", ".hg", "node_modules", "__pycache__", ".pytest_cache",
-    "dist", "build", "target", ".idea", ".vscode", "venv", ".venv",
-    "env", ".env", "vendor", "coverage", ".coverage", ".mypy_cache",
-    "__mocks__", ".cache", "tmp", "temp",
+    ".git",
+    ".svn",
+    ".hg",
+    "node_modules",
+    "__pycache__",
+    ".pytest_cache",
+    "dist",
+    "build",
+    "target",
+    ".idea",
+    ".vscode",
+    "venv",
+    ".venv",
+    "env",
+    ".env",
+    "vendor",
+    "coverage",
+    ".coverage",
+    ".mypy_cache",
+    "__mocks__",
+    ".cache",
+    "tmp",
+    "temp",
 }
 
 IGNORED_EXTENSIONS = {
-    ".pyc", ".pyo", ".class", ".jar", ".war", ".exe", ".dll", ".so",
-    ".dylib", ".bin", ".pdf", ".png", ".jpg", ".jpeg", ".gif", ".ico",
-    ".svg", ".woff", ".woff2", ".ttf", ".eot", ".mp4", ".mp3", ".zip",
-    ".tar", ".gz", ".lock", ".sum",
+    ".pyc",
+    ".pyo",
+    ".class",
+    ".jar",
+    ".war",
+    ".exe",
+    ".dll",
+    ".so",
+    ".dylib",
+    ".bin",
+    ".pdf",
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".gif",
+    ".ico",
+    ".svg",
+    ".woff",
+    ".woff2",
+    ".ttf",
+    ".eot",
+    ".mp4",
+    ".mp3",
+    ".zip",
+    ".tar",
+    ".gz",
+    ".lock",
+    ".sum",
 }
 
 

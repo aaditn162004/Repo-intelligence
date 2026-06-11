@@ -2,10 +2,11 @@
 High-level knowledge graph service.
 Wraps DependencyGraph with serialisation/caching via Redis.
 """
+
 from __future__ import annotations
 
 import json
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 import structlog
 
@@ -58,9 +59,7 @@ class KnowledgeGraphService:
             return {"nodes": [], "edges": []}
         return graph.get_subgraph(file_path, depth=depth)
 
-    async def get_affected_files(
-        self, repository_id: str, file_path: str
-    ) -> List[str]:
+    async def get_affected_files(self, repository_id: str, file_path: str) -> List[str]:
         graph = await self.get_graph(repository_id)
         if graph is None:
             return []
@@ -87,7 +86,5 @@ class KnowledgeGraphService:
             "total_nodes": g.number_of_nodes(),
             "total_edges": g.number_of_edges(),
             "node_types": type_counts,
-            "most_connected_files": [
-                {"file": f, "connections": d} for f, d in top_files
-            ],
+            "most_connected_files": [{"file": f, "connections": d} for f, d in top_files],
         }

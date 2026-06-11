@@ -1,17 +1,18 @@
 """
 Hybrid retriever: combines semantic vector search with graph-aware context.
 """
+
 from __future__ import annotations
 
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
 
 import structlog
 
-from app.services.vector_store import VectorStoreService
+from app.core.config import settings
 from app.embeddings.embedding_service import EmbeddingService
 from app.graph.knowledge_graph import KnowledgeGraphService
 from app.models.query import SourceReference
-from app.core.config import settings
+from app.services.vector_store import VectorStoreService
 
 logger = structlog.get_logger()
 
@@ -58,9 +59,7 @@ class HybridRetriever:
         expanded_hits: List[Dict[str, Any]] = list(hits)
 
         if include_graph and hits:
-            graph_context = await self._expand_with_graph(
-                repository_id, hits
-            )
+            graph_context = await self._expand_with_graph(repository_id, hits)
 
         # 4. Deduplicate and rank
         ranked_hits = self._rank_hits(expanded_hits)
@@ -120,14 +119,16 @@ class HybridRetriever:
         refs = []
         for hit in hits:
             p = hit["payload"]
-            refs.append(SourceReference(
-                chunk_id=p.get("chunk_id", ""),
-                file_path=p.get("file_path", ""),
-                chunk_type=p.get("chunk_type", "snippet"),
-                name=p.get("name") or None,
-                start_line=p.get("start_line", 0),
-                end_line=p.get("end_line", 0),
-                relevance_score=round(hit.get("final_score", hit["score"]), 4),
-                snippet=p.get("content", "")[:300],
-            ))
+            refs.append(
+                SourceReference(
+                    chunk_id=p.get("chunk_id", ""),
+                    file_path=p.get("file_path", ""),
+                    chunk_type=p.get("chunk_type", "snippet"),
+                    name=p.get("name") or None,
+                    start_line=p.get("start_line", 0),
+                    end_line=p.get("end_line", 0),
+                    relevance_score=round(hit.get("final_score", hit["score"]), 4),
+                    snippet=p.get("content", "")[:300],
+                )
+            )
         return refs

@@ -1,4 +1,5 @@
 """Dependency graph and architecture visualisation endpoints."""
+
 from __future__ import annotations
 
 from typing import Optional
@@ -6,8 +7,8 @@ from typing import Optional
 import structlog
 from fastapi import APIRouter, HTTPException, Query, Request
 
+from app.models.repository import IndexingStatus, Repository
 from app.services.cache import CacheService
-from app.models.repository import Repository, IndexingStatus
 
 logger = structlog.get_logger()
 router = APIRouter()
@@ -15,6 +16,7 @@ router = APIRouter()
 
 def _get_kg_service(request: Request):
     from app.graph.knowledge_graph import KnowledgeGraphService
+
     return KnowledgeGraphService(request.app.state.cache)
 
 

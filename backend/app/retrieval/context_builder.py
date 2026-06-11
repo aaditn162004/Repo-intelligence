@@ -1,6 +1,7 @@
 """
 Builds an LLM-ready context string from retrieval results.
 """
+
 from __future__ import annotations
 
 from typing import Any, Dict, List
