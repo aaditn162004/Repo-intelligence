@@ -67,7 +67,7 @@ export default function HomePage() {
         >
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-900/40 border border-brand-800 text-brand-400 text-xs mb-6">
             <Zap className="w-3 h-3" />
-            Powered by Qwen2.5-Coder + LangGraph
+            Powered by Groq + LangGraph
           </div>
 
           <h1 className="text-5xl md:text-6xl font-bold leading-tight mb-4">
