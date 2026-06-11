@@ -4,12 +4,13 @@ Handles batched encoding and caching.
 """
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
-from typing import List, Optional
-import structlog
-import asyncio
 from concurrent.futures import ThreadPoolExecutor
+from typing import List, Optional
+
+import structlog
 
 from app.core.config import settings
 

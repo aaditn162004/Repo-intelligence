@@ -1,9 +1,10 @@
 """Dependency graph and architecture visualisation endpoints."""
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Request, Query
 from typing import Optional
+
 import structlog
+from fastapi import APIRouter, HTTPException, Query, Request
 
 from app.services.cache import CacheService
 from app.models.repository import Repository, IndexingStatus

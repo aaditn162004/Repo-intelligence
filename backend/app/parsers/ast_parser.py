@@ -7,6 +7,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 from typing import List, Optional, Dict, Any, Tuple
+
 import structlog
 
 from app.models.code_chunk import CodeChunk, ChunkType

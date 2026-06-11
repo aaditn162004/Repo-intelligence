@@ -4,6 +4,7 @@ Hybrid retriever: combines semantic vector search with graph-aware context.
 from __future__ import annotations
 
 from typing import List, Dict, Any, Optional
+
 import structlog
 
 from app.services.vector_store import VectorStoreService

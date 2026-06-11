@@ -2,6 +2,7 @@
 Repository Intelligence Platform — FastAPI Application Entry Point
 """
 from contextlib import asynccontextmanager
+
 import structlog
 
 from fastapi import FastAPI

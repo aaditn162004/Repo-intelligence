@@ -1,6 +1,6 @@
-from pathlib import Path
-from typing import Optional, Dict, List
 import re
+from pathlib import Path
+from typing import Dict, List, Optional
 
 
 EXTENSION_MAP: Dict[str, str] = {

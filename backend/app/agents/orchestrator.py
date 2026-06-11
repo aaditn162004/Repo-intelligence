@@ -10,12 +10,12 @@ from __future__ import annotations
 
 import json
 from typing import Any, Dict, List, Optional, AsyncIterator
-from typing_extensions import TypedDict, Annotated
-import structlog
 
-from langgraph.graph import StateGraph, END
-from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+import structlog
+from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_ollama import ChatOllama
+from langgraph.graph import END, StateGraph
+from typing_extensions import TypedDict
 
 from app.core.config import settings
 from app.retrieval.hybrid_retriever import HybridRetriever

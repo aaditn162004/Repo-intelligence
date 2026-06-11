@@ -5,6 +5,7 @@ Combines nearby small chunks and splits oversized ones with overlap.
 from __future__ import annotations
 
 from typing import List, Dict, Any
+
 import structlog
 
 from app.models.code_chunk import CodeChunk, ChunkType

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 from typing import Any, Optional
+
 import structlog
 
 from app.core.config import settings

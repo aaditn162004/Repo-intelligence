@@ -4,8 +4,9 @@ Wraps DependencyGraph with serialisation/caching via Redis.
 """
 from __future__ import annotations
 
-from typing import Dict, Any, List, Optional
 import json
+from typing import Dict, Any, List, Optional
+
 import structlog
 
 from app.graph.dependency_graph import DependencyGraph
