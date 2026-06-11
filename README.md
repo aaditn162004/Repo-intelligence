@@ -1,3 +1,13 @@
+---
+title: RepoIntel API
+emoji: 🔍
+colorFrom: blue
+colorTo: purple
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # RepoIntel — AI-Powered Repository Intelligence Platform
 
 > Deep codebase understanding through semantic retrieval, AST parsing, dependency graphs, and multi-agent AI reasoning.
@@ -268,20 +278,27 @@ All backend settings via environment variables (see `backend/.env.example`):
 
 ## Deployment
 
-### Render (Backend)
+### Hugging Face Spaces (Backend)
 
-1. Create a new **Web Service** pointing to the `backend/` directory
-2. Set build command: `pip install -r requirements.txt`
-3. Set start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-4. Add environment variables (Qdrant Cloud, Upstash Redis, Ollama Cloud)
-5. Add `RENDER_DEPLOY_HOOK_URL` secret to GitHub for auto-deploy
+1. Go to [huggingface.co/new-space](https://huggingface.co/new-space), choose **Docker**, name it `repointel-api`
+2. Add the Space as a git remote: `git remote add space https://huggingface.co/spaces/<your-hf-username>/repointel-api`
+3. Push: `git push space main`
+4. In the Space's **Settings → Repository secrets**, add:
+   - `LLM_PROVIDER=groq`
+   - `GROQ_API_KEY=gsk_...`
+   - `QDRANT_URL=https://...`
+   - `QDRANT_API_KEY=...`
+   - `REDIS_URL=rediss://...`
+   - `CORS_ORIGINS=["https://your-app.vercel.app"]`
+
+The API will be live at `https://<your-hf-username>-repointel-api.hf.space`
 
 ### Vercel (Frontend)
 
 ```bash
 cd frontend
 npx vercel --prod
-# Set NEXT_PUBLIC_API_URL to your Render backend URL
+# Set NEXT_PUBLIC_API_URL to your HF Space URL above
 ```
 
 ---

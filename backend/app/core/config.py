@@ -19,7 +19,7 @@ class Settings(BaseSettings):
 
     # API
     API_V1_PREFIX: str = "/api/v1"
-    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:3001", "https://*.vercel.app"]
+    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:3001"]
 
     # Qdrant — set QDRANT_URL + QDRANT_API_KEY for cloud, leave blank for local
     QDRANT_HOST: str = "localhost"
