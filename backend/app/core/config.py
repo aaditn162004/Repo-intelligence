@@ -1,6 +1,7 @@
 import os
 from typing import List
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -67,6 +68,21 @@ class Settings(BaseSettings):
 
     # GitHub
     GITHUB_TOKEN: str = ""
+
+    # Strip stray whitespace/newlines from secrets — copy-pasting keys into
+    # hosting dashboards (HF Spaces, etc.) often appends a trailing "\n", which
+    # makes them illegal HTTP header values when sent to Qdrant/Groq.
+    @field_validator(
+        "QDRANT_URL",
+        "QDRANT_API_KEY",
+        "GROQ_API_KEY",
+        "REDIS_URL",
+        "GITHUB_TOKEN",
+        mode="before",
+    )
+    @classmethod
+    def _strip_secret(cls, v: str) -> str:
+        return v.strip() if isinstance(v, str) else v
 
     @property
     def repos_dir(self) -> str:
