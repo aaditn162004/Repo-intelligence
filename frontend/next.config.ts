@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: "standalone",
+  // standalone output is only needed for Docker; Vercel handles its own output
+  ...(process.env.VERCEL ? {} : { output: "standalone" }),
   async rewrites() {
     return [
       {
