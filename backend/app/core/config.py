@@ -19,20 +19,30 @@ class Settings(BaseSettings):
 
     # API
     API_V1_PREFIX: str = "/api/v1"
-    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:3001"]
+    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:3001", "https://*.vercel.app"]
 
-    # Qdrant
+    # Qdrant — set QDRANT_URL + QDRANT_API_KEY for cloud, leave blank for local
     QDRANT_HOST: str = "localhost"
     QDRANT_PORT: int = 6333
+    QDRANT_URL: str = ""
+    QDRANT_API_KEY: str = ""
     QDRANT_COLLECTION_PREFIX: str = "repo_intel"
 
     # Redis
     REDIS_URL: str = "redis://localhost:6379"
     REDIS_TTL: int = 3600
 
-    # Ollama / LLM
+    # LLM provider — "ollama" for local dev, "groq" for cloud
+    LLM_PROVIDER: str = "ollama"
+
+    # Ollama (local)
     OLLAMA_BASE_URL: str = "http://localhost:11434"
     LLM_MODEL: str = "qwen2.5-coder:7b"
+
+    # Groq (cloud)
+    GROQ_API_KEY: str = ""
+    GROQ_MODEL: str = "llama-3.3-70b-versatile"
+
     LLM_TEMPERATURE: float = 0.1
     LLM_MAX_TOKENS: int = 4096
 

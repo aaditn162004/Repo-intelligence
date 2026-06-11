@@ -45,7 +45,15 @@ class AgentState(TypedDict):
     error: Optional[str]
 
 
-def _get_llm() -> ChatOllama:
+def _get_llm():
+    if settings.LLM_PROVIDER == "groq":
+        from langchain_groq import ChatGroq
+        return ChatGroq(
+            model=settings.GROQ_MODEL,
+            api_key=settings.GROQ_API_KEY,
+            temperature=settings.LLM_TEMPERATURE,
+            max_tokens=settings.LLM_MAX_TOKENS,
+        )
     return ChatOllama(
         model=settings.LLM_MODEL,
         base_url=settings.OLLAMA_BASE_URL,
@@ -343,34 +351,50 @@ class RepoAgentGraph:
         system = context_builder.build_system_prompt(repository_name, query_type)
         prompt = f"Question: {question}\n\n{context_text}"
 
-        async with httpx.AsyncClient(timeout=300.0) as client:
-            async with client.stream(
-                "POST",
-                f"{settings.OLLAMA_BASE_URL}/api/chat",
-                json={
-                    "model": settings.LLM_MODEL,
-                    "messages": [
-                        {"role": "system", "content": system},
-                        {"role": "user", "content": prompt},
-                    ],
-                    "stream": True,
-                    "options": {
-                        "temperature": settings.LLM_TEMPERATURE,
-                        "num_predict": settings.LLM_MAX_TOKENS,
+        if settings.LLM_PROVIDER == "groq":
+            # Groq streams natively — no WDDM buffering issue
+            from langchain_groq import ChatGroq
+            groq_llm = ChatGroq(
+                model=settings.GROQ_MODEL,
+                api_key=settings.GROQ_API_KEY,
+                temperature=settings.LLM_TEMPERATURE,
+                max_tokens=settings.LLM_MAX_TOKENS,
+            )
+            async for chunk in groq_llm.astream(
+                [SystemMessage(content=system), HumanMessage(content=prompt)]
+            ):
+                if chunk.content:
+                    yield json.dumps({"type": "token", "content": chunk.content}) + "\n"
+        else:
+            # Ollama via direct httpx (langchain buffers; httpx streams line-by-line)
+            async with httpx.AsyncClient(timeout=300.0) as client:
+                async with client.stream(
+                    "POST",
+                    f"{settings.OLLAMA_BASE_URL}/api/chat",
+                    json={
+                        "model": settings.LLM_MODEL,
+                        "messages": [
+                            {"role": "system", "content": system},
+                            {"role": "user", "content": prompt},
+                        ],
+                        "stream": True,
+                        "options": {
+                            "temperature": settings.LLM_TEMPERATURE,
+                            "num_predict": settings.LLM_MAX_TOKENS,
+                        },
                     },
-                },
-            ) as response:
-                async for line in response.aiter_lines():
-                    if not line:
-                        continue
-                    try:
-                        data = json.loads(line)
-                        content = data.get("message", {}).get("content", "")
-                        if content:
-                            yield json.dumps({"type": "token", "content": content}) + "\n"
-                        if data.get("done"):
-                            break
-                    except json.JSONDecodeError:
-                        continue
+                ) as response:
+                    async for line in response.aiter_lines():
+                        if not line:
+                            continue
+                        try:
+                            data = json.loads(line)
+                            content = data.get("message", {}).get("content", "")
+                            if content:
+                                yield json.dumps({"type": "token", "content": content}) + "\n"
+                            if data.get("done"):
+                                break
+                        except json.JSONDecodeError:
+                            continue
 
         yield json.dumps({"type": "done"}) + "\n"

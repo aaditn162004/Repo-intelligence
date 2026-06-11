@@ -21,14 +21,21 @@ class VectorStoreService:
 
     async def initialize(self):
         from qdrant_client import QdrantClient
-        from qdrant_client.models import Distance, VectorParams
 
-        self._client = QdrantClient(
-            host=settings.QDRANT_HOST,
-            port=settings.QDRANT_PORT,
-            timeout=30,
-        )
-        logger.info("Qdrant connected", host=settings.QDRANT_HOST, port=settings.QDRANT_PORT)
+        if settings.QDRANT_URL:
+            self._client = QdrantClient(
+                url=settings.QDRANT_URL,
+                api_key=settings.QDRANT_API_KEY or None,
+                timeout=30,
+            )
+            logger.info("Qdrant connected (cloud)", url=settings.QDRANT_URL)
+        else:
+            self._client = QdrantClient(
+                host=settings.QDRANT_HOST,
+                port=settings.QDRANT_PORT,
+                timeout=30,
+            )
+            logger.info("Qdrant connected (local)", host=settings.QDRANT_HOST, port=settings.QDRANT_PORT)
 
     def _collection_name(self, repository_id: str) -> str:
         safe_id = repository_id.replace("-", "_")[:32]
