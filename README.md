@@ -6,6 +6,7 @@ colorTo: purple
 sdk: docker
 app_port: 7860
 pinned: false
+short_description: AI repository intelligence — semantic search, AST parsing, dependency graphs & multi-agent LLM reasoning.
 ---
 
 # RepoIntel — AI-Powered Repository Intelligence Platform
@@ -277,11 +278,16 @@ All backend settings via environment variables (see `backend/.env.example`):
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `LLM_MODEL` | `qwen2.5-coder:7b` | Ollama model name |
+| `LLM_PROVIDER` | `ollama` | `ollama` for local, `groq` for cloud |
+| `LLM_MODEL` | `qwen2.5-coder:7b` | Ollama model name (local) |
+| `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama API (local) |
+| `GROQ_API_KEY` | `` | Groq API key (cloud) |
+| `GROQ_MODEL` | `llama-3.3-70b-versatile` | Groq model name (cloud) |
 | `EMBEDDING_MODEL` | `BAAI/bge-small-en-v1.5` | HuggingFace model |
-| `QDRANT_HOST` | `localhost` | Qdrant hostname |
-| `REDIS_URL` | `redis://localhost:6379` | Redis connection |
-| `OLLAMA_BASE_URL` | `http://localhost:11434` | Ollama API |
+| `QDRANT_HOST` | `localhost` | Qdrant hostname (local) |
+| `QDRANT_URL` | `` | Qdrant Cloud URL (cloud) |
+| `QDRANT_API_KEY` | `` | Qdrant Cloud API key (cloud) |
+| `REDIS_URL` | `redis://localhost:6379` | Redis / Upstash connection |
 | `MAX_REPO_SIZE_MB` | `500` | Max repository size |
 | `TOP_K_RESULTS` | `10` | Retrieval top-k |
 | `GITHUB_TOKEN` | `` | For private repos |
@@ -307,11 +313,14 @@ The API will be live at `https://<your-hf-username>-repointel-api.hf.space`
 
 ### Vercel (Frontend)
 
-```bash
-cd frontend
-npx vercel --prod
-# Set NEXT_PUBLIC_API_URL to your HF Space URL above
-```
+Import the repo at [vercel.com/new](https://vercel.com/new), then in **project settings**:
+
+1. **Root Directory** → set to `frontend` (the Next.js app is not at the repo root)
+2. **Environment Variables** → add `NEXT_PUBLIC_API_URL` = your HF Space URL (e.g. `https://<your-hf-username>-repointel-api.hf.space`)
+   - This is baked in at **build time**, so redeploy after changing it.
+3. Deploy — Vercel auto-builds on every push to `main`.
+
+> The backend's CORS already allows any `*.vercel.app` subdomain via regex, so no extra CORS config is needed for Vercel-hosted frontends.
 
 ---
 
