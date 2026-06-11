@@ -12,10 +12,22 @@ pinned: false
 
 > Deep codebase understanding through semantic retrieval, AST parsing, dependency graphs, and multi-agent AI reasoning.
 
-[![CI](https://github.com/your-org/repo-intelligence/actions/workflows/ci.yml/badge.svg)](https://github.com/your-org/repo-intelligence/actions/workflows/ci.yml)
+[![CI](https://github.com/aaditn162004/Repo-intelligence/actions/workflows/ci.yml/badge.svg)](https://github.com/aaditn162004/Repo-intelligence/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python)](https://python.org)
 [![Next.js](https://img.shields.io/badge/Next.js-15-black?logo=next.js)](https://nextjs.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+---
+
+## 🚀 Live Demo
+
+| Service | URL |
+|---------|-----|
+| **Frontend (try it here)** | **[repo-intelligence-two.vercel.app](https://repo-intelligence-two.vercel.app)** |
+| **Backend API** | [aaditn-repointel-api.hf.space](https://aaditn-repointel-api.hf.space) |
+| **API Docs (Swagger)** | [aaditn-repointel-api.hf.space/api/docs](https://aaditn-repointel-api.hf.space/api/docs) |
+
+> ⏳ The backend runs on Hugging Face's free tier and **sleeps after inactivity** — the first request may take 30–60s to wake the Space.
 
 ---
 
@@ -26,7 +38,7 @@ RepoIntel is a **production-grade AI engineering platform** that lets developers
 - **AST-level code parsing** (Tree-sitter, 10+ languages)
 - **Semantic vector search** (BAAI/bge embeddings in Qdrant)
 - **Dependency graph analysis** (NetworkX + React Flow)
-- **Multi-agent LLM reasoning** (LangGraph + Qwen2.5-Coder via Ollama)
+- **Multi-agent LLM reasoning** (LangGraph — Groq in the cloud, or Qwen2.5-Coder via Ollama locally)
 - **Streaming AI responses** (SSE)
 
 Ask questions like:
@@ -107,7 +119,7 @@ GitHub Repository / ZIP Upload
 | Layer | Technology |
 |-------|-----------|
 | Backend API | FastAPI + Uvicorn (async) |
-| LLM | Qwen2.5-Coder:7b via Ollama |
+| LLM | Groq (cloud) · Qwen2.5-Coder:7b via Ollama (local) |
 | Embeddings | BAAI/bge-small-en-v1.5 (sentence-transformers) |
 | Vector DB | Qdrant |
 | Cache | Redis |
@@ -133,8 +145,8 @@ GitHub Repository / ZIP Upload
 ### 1. Clone and start
 
 ```bash
-git clone https://github.com/your-org/repo-intelligence.git
-cd repo-intelligence
+git clone https://github.com/aaditn162004/Repo-intelligence.git
+cd Repo-intelligence
 
 # Start all services (pulls Qwen model on first run ~4 GB)
 docker compose up -d
@@ -253,7 +265,7 @@ repo-intelligence/
 │       ├── hooks/           # SWR hooks + streaming hook
 │       ├── lib/             # API client + utilities
 │       └── types/           # TypeScript definitions
-├── .github/workflows/       # CI + Deploy pipelines
+├── .github/workflows/       # CI pipeline (lint + build)
 └── docker-compose.yml
 ```
 
