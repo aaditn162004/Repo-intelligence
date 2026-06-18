@@ -1,0 +1,13 @@
+{
+  "id": "structural-001",
+  "category": "structural",
+  "repo_url": "https://github.com/psf/requests",
+  "branch": "main",
+  "question": "How is the requests package organised into its main modules and what is each responsible for?",
+  "expected_facts": [
+    "requests/api.py exposes the functional API (get, post, etc.)",
+    "requests/sessions.py defines the Session object",
+    "requests/models.py defines the Request, PreparedRequest, and Response objects",
+    "requests/adapters.py contains the transport adapters (HTTPAdapter)"
+  ]
+}

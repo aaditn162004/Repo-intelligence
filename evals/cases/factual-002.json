@@ -1,0 +1,12 @@
+{
+  "id": "factual-002",
+  "category": "factual",
+  "repo_url": "https://github.com/psf/requests",
+  "branch": "main",
+  "question": "Which class manages persistent settings, cookies, and connection pooling across multiple requests?",
+  "expected_facts": [
+    "The Session class provides persistence across requests",
+    "Session is defined in requests/sessions.py",
+    "Session persists cookies and reuses the underlying connection pool"
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "id": "structural-002",
+  "category": "structural",
+  "repo_url": "https://github.com/psf/requests",
+  "branch": "main",
+  "question": "Where is the Response object defined and what are some of its key attributes and methods?",
+  "expected_facts": [
+    "The Response class is defined in requests/models.py",
+    "It exposes a status_code attribute",
+    "It provides a json() method to decode the response body",
+    "It exposes the response body via the text and content attributes"
+  ]
+}

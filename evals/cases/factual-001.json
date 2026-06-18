@@ -1,0 +1,12 @@
+{
+  "id": "factual-001",
+  "category": "factual",
+  "repo_url": "https://github.com/psf/requests",
+  "branch": "main",
+  "question": "What is the top-level function for making an HTTP GET request, and which module defines it?",
+  "expected_facts": [
+    "The `get` function is the public helper for GET requests",
+    "It is defined in requests/api.py",
+    "It delegates to the generic `request()` function"
+  ]
+}

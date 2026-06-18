@@ -1,0 +1,14 @@
+{
+  "id": "multi_hop-001",
+  "category": "multi_hop",
+  "repo_url": "https://github.com/psf/requests",
+  "branch": "main",
+  "question": "Trace what happens when I call requests.get(url): how does the call flow from the top-level helper down to the code that actually sends bytes over the network?",
+  "expected_facts": [
+    "requests.get calls the generic request() function in requests/api.py",
+    "request() opens a Session and calls Session.request()",
+    "Session.request builds a PreparedRequest and calls Session.send()",
+    "Session.send dispatches to a transport adapter's send() method (HTTPAdapter)",
+    "HTTPAdapter.send issues the request through urllib3's connection pool"
+  ]
+}
