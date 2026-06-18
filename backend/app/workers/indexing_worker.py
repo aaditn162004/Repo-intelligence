@@ -13,8 +13,10 @@ from pathlib import Path
 from typing import List, Optional
 
 import structlog
+from opentelemetry import trace
 
 from app.core.config import settings
+from app.core.telemetry import get_tracer, traced
 from app.embeddings.embedding_service import EmbeddingService
 from app.graph.knowledge_graph import KnowledgeGraphService
 from app.models.code_chunk import CodeChunk
@@ -29,6 +31,7 @@ from app.utils.git_utils import cleanup_repository, clone_repository, extract_re
 from app.utils.zip_utils import extract_zip, validate_zip
 
 logger = structlog.get_logger()
+tracer = get_tracer("repointel.indexing")
 
 
 class IndexingWorker:
@@ -56,6 +59,7 @@ class IndexingWorker:
     async def index_zip_repo(self, repository: Repository, zip_path: str) -> Repository:
         return await self._run_pipeline(repository, source="zip", zip_path=zip_path)
 
+    @traced("index.pipeline")
     async def _run_pipeline(
         self,
         repo: Repository,
@@ -69,15 +73,17 @@ class IndexingWorker:
             # --- Stage 1: Clone / extract ---
             await self._update_progress(repo.id, IndexingStatus.CLONING, "Cloning repository", 5)
 
-            if source == "github":
-                repo_path = await asyncio.get_event_loop().run_in_executor(
-                    None,
-                    lambda: clone_repository(repo.url, repo_dir, repo.branch, github_token),
-                )
-            else:
-                repo_path = await asyncio.get_event_loop().run_in_executor(
-                    None, lambda: extract_zip(zip_path, repo_dir)
-                )
+            with tracer.start_as_current_span("index.fetch") as span:
+                span.set_attribute("index.source", source)
+                if source == "github":
+                    repo_path = await asyncio.get_event_loop().run_in_executor(
+                        None,
+                        lambda: clone_repository(repo.url, repo_dir, repo.branch, github_token),
+                    )
+                else:
+                    repo_path = await asyncio.get_event_loop().run_in_executor(
+                        None, lambda: extract_zip(zip_path, repo_dir)
+                    )
 
             # --- Stage 2: Scan files ---
             await self._update_progress(repo.id, IndexingStatus.PARSING, "Scanning files", 15)
@@ -136,12 +142,16 @@ class IndexingWorker:
 
             repo.framework_hints = list(framework_hints)
             repo.total_chunks = len(all_chunks)
+            pipeline_span = trace.get_current_span()
+            pipeline_span.set_attribute("index.total_files", len(file_list))
+            pipeline_span.set_attribute("index.total_chunks", len(all_chunks))
 
             # --- Stage 4: Create Qdrant collection ---
             await self._update_progress(
                 repo.id, IndexingStatus.EMBEDDING, "Creating vector index", 50
             )
-            await self._vector_store.create_collection(repo.id)
+            with tracer.start_as_current_span("index.create_collection"):
+                await self._vector_store.create_collection(repo.id)
 
             # --- Stage 5: Embed chunks in batches ---
             embedding_items = self._chunker.prepare_for_embedding(all_chunks)
@@ -153,10 +163,12 @@ class IndexingWorker:
                 batch_texts = texts[batch_start : batch_start + batch_size]
                 batch_chunks = chunks_to_embed[batch_start : batch_start + batch_size]
 
-                embeddings = await self._embedder.embed_texts(batch_texts)
-                await self._vector_store.upsert_chunks(
-                    repo.id, batch_chunks, embeddings, batch_texts
-                )
+                with tracer.start_as_current_span("index.embed_batch") as span:
+                    span.set_attribute("batch.size", len(batch_texts))
+                    embeddings = await self._embedder.embed_texts(batch_texts)
+                    await self._vector_store.upsert_chunks(
+                        repo.id, batch_chunks, embeddings, batch_texts
+                    )
 
                 progress = 50 + (batch_start / max(len(texts), 1)) * 30
                 await self._update_progress(
@@ -170,7 +182,9 @@ class IndexingWorker:
             await self._update_progress(
                 repo.id, IndexingStatus.GRAPHING, "Building dependency graph", 85
             )
-            await self._kg.build_graph(repo.id, all_chunks)
+            with tracer.start_as_current_span("index.build_graph") as span:
+                span.set_attribute("index.chunks", len(all_chunks))
+                await self._kg.build_graph(repo.id, all_chunks)
 
             # --- Stage 7: Finalize ---
             repo.status = IndexingStatus.READY

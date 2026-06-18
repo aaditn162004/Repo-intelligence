@@ -16,15 +16,18 @@ import structlog
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_ollama import ChatOllama
 from langgraph.graph import END, StateGraph
+from opentelemetry import trace
 from typing_extensions import TypedDict
 
 from app.core.config import settings
+from app.core.telemetry import get_tracer, traced
 from app.graph.knowledge_graph import KnowledgeGraphService
 from app.models.query import QueryType, SourceReference
 from app.retrieval.context_builder import ContextBuilder
 from app.retrieval.hybrid_retriever import HybridRetriever
 
 logger = structlog.get_logger()
+tracer = get_tracer("repointel.agents")
 
 
 # ---------------------------------------------------------------------------
@@ -70,6 +73,7 @@ def _get_llm():
 # ---------------------------------------------------------------------------
 
 
+@traced("agent.planner")
 def planner_node(state: AgentState) -> AgentState:
     """Classifies the query and refines it for downstream agents."""
     llm = _get_llm()
@@ -100,6 +104,7 @@ def planner_node(state: AgentState) -> AgentState:
     new_state = dict(state)
     new_state["query_type"] = query_type.value
     new_state["reasoning_steps"] = [f"Query classified as: **{query_type.value}**"]
+    trace.get_current_span().set_attribute("agent.query_type", query_type.value)
     logger.info("Query classified", query_type=query_type.value)
     return AgentState(**new_state)
 
@@ -114,6 +119,7 @@ def retriever_node(state: AgentState) -> AgentState:
     return AgentState(**new_state)
 
 
+@traced("agent.architect")
 def architect_node(state: AgentState) -> AgentState:
     """Enriches context with architecture analysis."""
     llm = _get_llm()
@@ -134,6 +140,7 @@ def architect_node(state: AgentState) -> AgentState:
     return AgentState(**new_state)
 
 
+@traced("agent.documenter")
 def documenter_node(state: AgentState) -> AgentState:
     """Generates documentation from retrieved code."""
     llm = _get_llm()
@@ -153,6 +160,7 @@ def documenter_node(state: AgentState) -> AgentState:
     return AgentState(**new_state)
 
 
+@traced("agent.impact_analyzer")
 def impact_analyzer_node(state: AgentState) -> AgentState:
     """Analyses dependency impact for a proposed change."""
     llm = _get_llm()
@@ -181,6 +189,7 @@ def impact_analyzer_node(state: AgentState) -> AgentState:
     return AgentState(**new_state)
 
 
+@traced("agent.synthesizer")
 def synthesizer_node(state: AgentState) -> AgentState:
     """Produces the final, comprehensive answer."""
     llm = _get_llm()
@@ -266,6 +275,7 @@ class RepoAgentGraph:
 
         return workflow.compile()
 
+    @traced("agent.query")
     async def run(
         self,
         repository_id: str,
@@ -274,11 +284,13 @@ class RepoAgentGraph:
         top_k: int = 10,
     ) -> Dict[str, Any]:
         # Step 1: retrieval (async, outside graph)
-        retrieval_result = await self._retriever.retrieve(
-            repository_id=repository_id,
-            query=question,
-            top_k=top_k,
-        )
+        with tracer.start_as_current_span("agent.retrieve") as span:
+            retrieval_result = await self._retriever.retrieve(
+                repository_id=repository_id,
+                query=question,
+                top_k=top_k,
+            )
+            span.set_attribute("retrieve.sources", len(retrieval_result.get("sources", [])))
 
         # Step 2: build context text
         context_builder = ContextBuilder()
@@ -323,11 +335,13 @@ class RepoAgentGraph:
         import httpx
 
         # Retrieve context first
-        retrieval_result = await self._retriever.retrieve(
-            repository_id=repository_id,
-            query=question,
-            top_k=top_k,
-        )
+        with tracer.start_as_current_span("agent.retrieve") as span:
+            retrieval_result = await self._retriever.retrieve(
+                repository_id=repository_id,
+                query=question,
+                top_k=top_k,
+            )
+            span.set_attribute("retrieve.sources", len(retrieval_result.get("sources", [])))
         sources: List[SourceReference] = retrieval_result["sources"]
         graph_context = retrieval_result.get("graph_context", {})
         context_builder = ContextBuilder()

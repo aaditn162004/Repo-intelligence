@@ -55,6 +55,15 @@ Full stack: `docker compose up -d` (root) starts everything incl. frontend on :3
 
 **Frontend ↔ backend**: every call goes through the typed `api` object in [frontend/src/lib/api.ts](frontend/src/lib/api.ts); base URL is `NEXT_PUBLIC_API_URL` + `/api/v1` (falls back to a same-origin `/api/v1` proxy). Add new endpoints there, keep types in [frontend/src/types/index.ts](frontend/src/types/index.ts) in sync with the Pydantic models in `backend/app/models/`. Routers are mounted in [backend/app/main.py](backend/app/main.py).
 
+## Observability (OpenTelemetry)
+
+Tracing is set up in [backend/app/core/telemetry.py](backend/app/core/telemetry.py) and initialized once in `main.py`'s lifespan. It is **off by default** and no-op-safe — `get_tracer()` returns OTel's no-op tracer when disabled, so the `@traced(...)` decorator and inline spans cost nothing and change no behavior.
+
+- `OTEL_ENABLED=true` → traces print to the **console** (free, no backend; this is "Phase 1").
+- `OTEL_EXPORTER_OTLP_ENDPOINT=<url>` → ships traces via OTLP to a backend (SigNoz/Grafana/etc.) and implies enabled. `OTEL_SERVICE_NAME` defaults to `repointel-api`.
+
+Auto-instrumentation (FastAPI requests, `httpx`, `redis`) is wired in `_instrument_libraries`. Manual spans cover the two slow pipelines: the agent flow ([orchestrator.py](backend/app/agents/orchestrator.py) — `agent.query` → `agent.retrieve` → per-node `agent.*` spans) and indexing ([indexing_worker.py](backend/app/workers/indexing_worker.py) — `index.pipeline` → `index.fetch` / `index.embed_batch` / `index.build_graph`, with file/chunk counts as span attributes). Add new spans with `@traced("name")` for whole functions or `tracer.start_as_current_span("name")` for blocks.
+
 ## Conventions & gotchas
 
 - Backend logging is **structlog** (`structlog.get_logger()`), not stdlib logging — pass structured kwargs, not f-strings.

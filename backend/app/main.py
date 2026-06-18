@@ -12,6 +12,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 from app.api.routes import documentation, graph, health, query, repositories
 from app.core.config import settings
 from app.core.logging import setup_logging
+from app.core.telemetry import setup_telemetry
 from app.embeddings.embedding_service import EmbeddingService
 from app.services.cache import CacheService
 from app.services.vector_store import VectorStoreService
@@ -23,6 +24,10 @@ logger = structlog.get_logger()
 async def lifespan(app: FastAPI):
     setup_logging()
     logger.info("Starting Repository Intelligence Platform", version=settings.APP_VERSION)
+
+    # Configure tracing before anything else so auto-instrumentation is active
+    # (no-op unless OTEL_ENABLED / OTEL_EXPORTER_OTLP_ENDPOINT is set).
+    setup_telemetry(app)
 
     # Initialise shared services
     vector_store = VectorStoreService()
