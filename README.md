@@ -6,7 +6,7 @@ colorTo: purple
 sdk: docker
 app_port: 7860
 pinned: false
-short_description: AI repository intelligence — semantic search, AST parsing, dependency graphs & multi-agent LLM reasoning.
+short_description: AI repo intelligence: semantic code search + AI agents
 ---
 
 # RepoIntel — AI-Powered Repository Intelligence Platform
