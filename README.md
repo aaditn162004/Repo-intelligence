@@ -131,6 +131,8 @@ GitHub Repository / ZIP Upload
 | Graph Visualisation | React Flow |
 | Styling | Tailwind CSS |
 | Containerisation | Docker + Docker Compose |
+| Observability | OpenTelemetry (console / OTLP exporter) |
+| Evaluation | Hand-rolled LLM-as-judge (Groq) |
 | CI/CD | GitHub Actions |
 
 ---
@@ -217,6 +219,23 @@ cd frontend
 npm run type-check
 ```
 
+### Evals
+
+A hand-rolled evaluation harness lives in `evals/`. It runs question/answer test
+cases (stored as JSON) against the deployed API and scores each answer with an
+**LLM-as-judge** (Groq, LLaMA 3.1 8B), producing a Markdown report with overall
+pass rate and a per-category breakdown — `factual`, `structural`, `multi_hop`.
+No LangSmith / Braintrust; just `httpx` + the Groq REST API.
+
+```bash
+cd evals
+pip install -r requirements.txt
+export GROQ_API_KEY=gsk_...        # only key needed — the judge runs on Groq
+python run_evals.py                # or: --category multi_hop, --limit 3
+```
+
+See [`evals/README.md`](evals/README.md) for the test-case format and scoring details.
+
 ---
 
 ## API Reference
@@ -249,7 +268,7 @@ repo-intelligence/
 │   ├── app/
 │   │   ├── agents/          # LangGraph multi-agent pipeline
 │   │   ├── api/routes/      # FastAPI route handlers
-│   │   ├── core/            # Config, logging
+│   │   ├── core/            # Config, logging, OpenTelemetry tracing
 │   │   ├── embeddings/      # Sentence-transformer wrapper
 │   │   ├── graph/           # NetworkX dependency/knowledge graph
 │   │   ├── models/          # Pydantic schemas
@@ -266,6 +285,7 @@ repo-intelligence/
 │       ├── hooks/           # SWR hooks + streaming hook
 │       ├── lib/             # API client + utilities
 │       └── types/           # TypeScript definitions
+├── evals/                   # Eval harness — JSON cases + LLM-as-judge (Groq)
 ├── .github/workflows/       # CI pipeline (lint + build)
 └── docker-compose.yml
 ```
@@ -291,6 +311,26 @@ All backend settings via environment variables (see `backend/.env.example`):
 | `MAX_REPO_SIZE_MB` | `500` | Max repository size |
 | `TOP_K_RESULTS` | `10` | Retrieval top-k |
 | `GITHUB_TOKEN` | `` | For private repos |
+| `OTEL_ENABLED` | `false` | Set `true` to emit traces to the console (Phase 1) |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | `` | Ship traces to an OTLP backend (SigNoz, Grafana…); implies enabled |
+| `OTEL_SERVICE_NAME` | `repointel-api` | Service name attached to traces |
+
+---
+
+## Observability
+
+The backend is instrumented with **OpenTelemetry**. Tracing is **off by default**
+(no overhead) and is enabled per-environment:
+
+- `OTEL_ENABLED=true` → traces print to the **console** — free, no external backend
+- `OTEL_EXPORTER_OTLP_ENDPOINT=<url>` → traces are shipped to any OTLP-compatible
+  backend (SigNoz, Grafana Cloud, Datadog…) with **no code change**
+
+FastAPI requests, `httpx`, and Redis are auto-instrumented. Custom spans cover the
+two slow paths so you can see exactly where latency goes per request:
+
+- **Query:** `agent.query → agent.retrieve → agent.<node>` (planner, synthesiser, …)
+- **Indexing:** `index.pipeline → index.fetch / index.embed_batch / index.build_graph`
 
 ---
 
